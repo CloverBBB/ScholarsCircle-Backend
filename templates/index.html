@@ -14,6 +14,22 @@
         #friendList {
             display: none;
         }
+        #friendsAndMessages {
+            display: flex;
+        }
+        #friends {
+            margin-right: 20px;
+        }
+        #messages {
+            flex-grow: 1;
+        }
+        #messagesList {
+            list-style-type: none;
+            padding: 0;
+        }
+        #messagesList li {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -25,9 +41,17 @@
             <p>Logged in as: <span id="currentUser">{{ user }}</span></p>
             <button id="toggleFriendListBtn" onclick="toggleFriendList()">Show Friends</button>
             <button id="toggleAddFriendBtn" onclick="toggleAddFriendForm()">Show Add Friend</button>
-            <div id="friendList" style="display: none;">
-                <h2>Friends List</h2>
-                <ul id="friendsUl"></ul>
+            <div id="friendsAndMessages">
+                <div id="friends">
+                    <div id="friendList" style="display: none;">
+                        <h2>Friends List</h2>
+                        <ul id="friendsUl"></ul>
+                    </div>
+                </div>
+                <div id="messages">
+                    <h2>Recent Messages</h2>
+                    <ul id="messagesList"></ul>
+                </div>
             </div>
         {% else %}
             <p>Not logged in</p>
@@ -61,6 +85,18 @@
         </form>
     </div>
 
+    <!-- New section for starting a message conversation -->
+    <div id="startConversationForm">
+        <h2>Start Conversation</h2>
+        <form id="messageForm">
+            <label for="recipient">Recipient:</label><br>
+            <input type="text" id="recipient" name="recipient"><br><br>
+            <label for="message">Message:</label><br>
+            <textarea id="message" name="message"></textarea><br><br>
+            <button type="submit">Send Message</button>
+        </form>
+    </div>
+
     <script>
         // Function to toggle display of friend list
         function toggleFriendList() {
@@ -87,9 +123,17 @@
                     <p>Logged in as: <span id="currentUser">${user}</span></p>
                     <button id="toggleFriendListBtn" onclick="toggleFriendList()">Show Friends</button>
                     <button id="toggleAddFriendBtn" onclick="toggleAddFriendForm()">Show Add Friend</button>
-                    <div id="friendList" style="display: none;">
-                        <h2>Friends List</h2>
-                        <ul id="friendsUl"></ul>
+                    <div id="friendsAndMessages">
+                        <div id="friends">
+                            <div id="friendList" style="display: none;">
+                                <h2>Friends List</h2>
+                                <ul id="friendsUl"></ul>
+                            </div>
+                        </div>
+                        <div id="messages">
+                            <h2>Recent Messages</h2>
+                            <ul id="messagesList"></ul>
+                        </div>
                     </div>
                 `;
                 document.getElementById('addFriendForm').style.display = 'none';
@@ -145,90 +189,89 @@
             .catch(error => console.error('Error:', error));
         });
 
-        // Fetch and display friends list when user is logged in
-        // Fetch and display friends list when user is logged in
-const accessToken = localStorage.getItem('access_token');
-if (accessToken) {
-    fetch('/friends', {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + accessToken
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        const friendsUl = document.getElementById('friendsUl');
-        friendsUl.innerHTML = '';
-        data.friends.forEach(friend => {
-            const li = document.createElement('li');
-            li.textContent = friend;
-            friendsUl.appendChild(li);
-        });
-    })
-    .catch(error => console.error('Error fetching friends:', error));
-}
-
-// Function to update friends list
-    function updateFriendsList() {
-        fetch('/friends', {
-            method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + accessToken
+        // Event listener for adding friend form submission
+        document.getElementById('friendForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const friendUsername = document.getElementById('friend_username').value;
+            if (!friendUsername) {
+                alert('Friend username is required');
+                return;
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            const friendsUl = document.getElementById('friendsUl');
-            friendsUl.innerHTML = '';
-            data.friends.forEach(friend => {
-                const li = document.createElement('li');
-                li.textContent = friend;
-            friendsUl.appendChild(li);
+            fetch('/add_friend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify({friend_username: friendUsername})
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch(error => console.error('Error:', error));
         });
-    })
-    .catch(error => console.error('Error fetching friends:', error));
-}
 
+        // Event listener for starting a conversation form submission
+        document.getElementById('messageForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const recipient = document.getElementById('recipient').value;
+            const message = document.getElementById('message').value;
+            if (!recipient || !message) {
+                alert('Recipient and message are required');
+                return;
+            }
+            fetch('/start_conversation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify({recipient: recipient, message: message})
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messagesList = document.getElementById('messagesList');
+                const li = document.createElement('li');
+                li.textContent = `${data.sender} to ${data.recipient}: ${data.message}`;
+                messagesList.appendChild(li);
+            })
+            .catch(error => console.error('Error:', error));
+        });
 
-
-        function addFriend() {
-        const friendUsername = document.getElementById('friend_username').value;
-        const accessToken = localStorage.getItem('access_token');
-        const user = document.getElementById('currentUser').innerText.trim();
-        if (!accessToken || !user) {
-            alert('You must be logged in to add friends');
-            return;
-        }
-        fetch('/add_friend', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + accessToken
-            },
-            body: JSON.stringify({friend_username: friendUsername, user: user})
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            // Update friends list if friend was added successfully
-            if (data.success) {
+        // Fetch friends list and recent messages when the page loads
+        window.onload = function() {
+            fetch('/friends', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
                 const friendsUl = document.getElementById('friendsUl');
-                const li = document.createElement('li');
-                li.textContent = friendUsername;
-                friendsUl.appendChild(li);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
+                friendsUl.innerHTML = '';
+                data.friends.forEach(friend => {
+                    const li = document.createElement('li');
+                    li.textContent = friend;
+                    friendsUl.appendChild(li);
+                });
+            })
+            .catch(error => console.error('Error:', error));
 
-    // Event listener for add friend form submission
-    document.getElementById('friendForm').addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent the default form submission
-        addFriend(); // Call the addFriend function to handle adding a friend asynchronously
-        // Call the function to update friends list after adding a friend
-        updateFriendsList()
-    });
-    
+            fetch('/recent_messages', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messagesList = document.getElementById('messagesList');
+                data.messages.forEach(message => {
+                    const li = document.createElement('li');
+                    li.textContent = message;
+                    messagesList.appendChild(li);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        };
     </script>
 </body>
 </html>
