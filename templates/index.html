@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scholar Circle</title>
+    <style>
+        .user-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        #addFriendForm,
+        #friendList {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1></h1>
+    <p>Your city: <span id="city">{{ location.city }}</span></p>
+
+    <div class="user-info" id="userInfo">
+        {% if user %}
+            <p>Logged in as: <span id="currentUser">{{ user }}</span></p>
+            <button id="toggleFriendListBtn" onclick="toggleFriendList()">Show Friends</button>
+            <button id="toggleAddFriendBtn" onclick="toggleAddFriendForm()">Show Add Friend</button>
+            <div id="friendList" style="display: none;">
+                <h2>Friends List</h2>
+                <ul id="friendsUl"></ul>
+            </div>
+        {% else %}
+            <p>Not logged in</p>
+        {% endif %}
+    </div>
+
+    <h2>Sign In</h2>
+    <form id="loginForm">
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" name="username"><br>
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" name="password"><br><br>
+        <button type="submit">Sign In</button>
+    </form>
+
+    <h2>Create Account</h2>
+    <form id="createAccountForm">
+        <label for="new_username">Username:</label><br>
+        <input type="text" id="new_username" name="new_username"><br>
+        <label for="new_password">Password:</label><br>
+        <input type="password" id="new_password" name="new_password"><br><br>
+        <button type="submit">Create Account</button>
+    </form>
+
+    <div id="addFriendForm">
+        <h2>Add Friend</h2>
+        <form id="friendForm">
+            <label for="friend_username">Friend Username:</label><br>
+            <input type="text" id="friend_username" name="friend_username"><br><br>
+            <button type="submit">Add Friend</button>
+        </form>
+    </div>
+
+    <script>
+        // Function to toggle display of friend list
+        function toggleFriendList() {
+            const friendList = document.getElementById('friendList');
+            friendList.style.display = friendList.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Function to toggle display of add friend form
+        function toggleAddFriendForm() {
+            const addFriendForm = document.getElementById('addFriendForm');
+            addFriendForm.style.display = addFriendForm.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Function to update UI based on user authentication status
+        function updateUI(user) {
+            const userInfo = document.getElementById('userInfo');
+            const toggleFriendListBtn = document.getElementById('toggleFriendListBtn');
+            const toggleAddFriendBtn = document.getElementById('toggleAddFriendBtn');
+
+            const accessToken = localStorage.getItem('access_token');
+
+            if (user && accessToken) {
+                userInfo.innerHTML = `
+                    <p>Logged in as: <span id="currentUser">${user}</span></p>
+                    <button id="toggleFriendListBtn" onclick="toggleFriendList()">Show Friends</button>
+                    <button id="toggleAddFriendBtn" onclick="toggleAddFriendForm()">Show Add Friend</button>
+                    <div id="friendList" style="display: none;">
+                        <h2>Friends List</h2>
+                        <ul id="friendsUl"></ul>
+                    </div>
+                `;
+                document.getElementById('addFriendForm').style.display = 'none';
+            } else {
+                userInfo.innerHTML = '<p>Not logged in</p>';
+                document.getElementById('addFriendForm').style.display = 'none';
+            }
+        }
+
+        // Event listener for sign in form submission
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({username: username, password: password})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.access_token) {
+                    alert('Sign in successful!');
+                    localStorage.setItem('access_token', data.access_token);
+                    updateUI(username);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Event listener for account creation form submission
+        document.getElementById('createAccountForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const newUsername = document.getElementById('new_username').value;
+            const newPassword = document.getElementById('new_password').value;
+            if (!newUsername || !newPassword) {
+                alert('Username and password are required');
+                return;
+            }
+            fetch('/create_account', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({username: newUsername, password: newPassword})
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Fetch and display friends list when user is logged in
+        // Fetch and display friends list when user is logged in
+const accessToken = localStorage.getItem('access_token');
+if (accessToken) {
+    fetch('/friends', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const friendsUl = document.getElementById('friendsUl');
+        friendsUl.innerHTML = '';
+        data.friends.forEach(friend => {
+            const li = document.createElement('li');
+            li.textContent = friend;
+            friendsUl.appendChild(li);
+        });
+    })
+    .catch(error => console.error('Error fetching friends:', error));
+}
+
+// Function to update friends list
+    function updateFriendsList() {
+        fetch('/friends', {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + accessToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const friendsUl = document.getElementById('friendsUl');
+            friendsUl.innerHTML = '';
+            data.friends.forEach(friend => {
+                const li = document.createElement('li');
+                li.textContent = friend;
+            friendsUl.appendChild(li);
+        });
+    })
+    .catch(error => console.error('Error fetching friends:', error));
+}
+
+
+
+        function addFriend() {
+        const friendUsername = document.getElementById('friend_username').value;
+        const accessToken = localStorage.getItem('access_token');
+        const user = document.getElementById('currentUser').innerText.trim();
+        if (!accessToken || !user) {
+            alert('You must be logged in to add friends');
+            return;
+        }
+        fetch('/add_friend', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + accessToken
+            },
+            body: JSON.stringify({friend_username: friendUsername, user: user})
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            // Update friends list if friend was added successfully
+            if (data.success) {
+                const friendsUl = document.getElementById('friendsUl');
+                const li = document.createElement('li');
+                li.textContent = friendUsername;
+                friendsUl.appendChild(li);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // Event listener for add friend form submission
+    document.getElementById('friendForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the default form submission
+        addFriend(); // Call the addFriend function to handle adding a friend asynchronously
+        // Call the function to update friends list after adding a friend
+        updateFriendsList()
+    });
+    
+    </script>
+</body>
+</html>
